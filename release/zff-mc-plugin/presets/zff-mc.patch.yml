@@ -1,0 +1,89 @@
+# ZFF MC「ZFF MC Mode」preset 声明（DSH 0.2.0-rc.2+ 的声明式 preset 注册表）
+#
+# 一条普通的 `@deepseek-ai/dsh-agent-preset` 插件行，随本包的 `dsh.bundle.patch` 数组挂进
+# profile；profile 只要在 `dsh.profile.bundles` 里列出 `@local/zff-mc` 即生效。
+#
+# 🔴 `config.id` 就是插件判定"是不是 ZFF MC 模式"的钥匙：
+#    宿主 `agentPresets.composedPreset(agent.ctx)` 返回它，插件拿它跟配置里的
+#    `modePresets`（默认 `['zff-mc']`）比对 —— 见 index.js `presetIdOf()`。
+#    改这里的 id 必须同步改 `modePresets`，否则续跑/工具白名单全都不会生效。
+#
+# 组成刻意保持"窄"（与 whale_craft 的 presets/minecraft.patch.yml 同一思路）：
+#   persona + 文件工具 + 文件检索 + 待办 + 压缩组。
+#   宿主其余标准工具（shell / 子代理 / 技能 / 联网 / present…）一律**不挂**；
+#   游戏工具来自 `@deepseek-ai/dsh-mcp-client`（`mcp__mc__*`，host 平面注册，不从这里挂）。
+#   运行时插件还会再收一道工具白名单（index.js `applyToolPolicy` + `tools.guard`）。
+#
+# persona 模板不要引用 {{cwd}}：DSH 0.2.1-rc.2 起 agent-loop 不再注册该变量，
+# 自定义 preset 引用它会让新会话直接报 unknown prompt variable。
+# 工作目录由宿主的 working-directory runtime context 自动提供。
+#
+# 想自定义组成：用 Web 编辑器（或 profile 的 cordis.patch.yml）按行 id
+# （`preset-zff-mc`）覆盖 `config.plugins`，不要直接改这个文件（包更新会覆盖）。
+- insert:
+    - id: preset-zff-mc
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: zff-mc
+        name: ZFF MC Mode
+        description: 在真实 Minecraft 客户端里陪玩的 AI 玩家。只提供游戏与少量文件工具，插件负责自动续跑与提示词三件套。
+        order: 30
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              # ── ZFF MC 模式的 system prompt 开头（玩家 2026-11-01 指定，英文原句）──
+              # `@deepseek-ai/dsh-persona` 的 prefix/suffix 是**真 system prompt** 的一部分：
+              #   system = prefix + 宿主基础提示 + suffix
+              # 所以 prefix 这一行 = 模型在 ZFF MC 模式里读到的第一句话。想换句子只动这里。
+              # ⚠️ 不要写 `{{cwd}}`（DSH 0.2.1-rc.2 起不再注册该变量，新会话会直接报错）；`{{model}}` 可以。
+              # 身份细节（外形、口头禅）在插件注入的 Part C `persona.md` 里，这里不要重复。
+              prefix: 'You will be a player in a Minecraft world.'
+              # 操作铁律放 suffix：prefix 只留角色锚点，二者都进 system prompt。
+              # Part A/B/C（prompts/{tools,rules,persona}.md）不走这里，是插件每步注入的消息。
+              suffix: '你是由模型 {{model}} 驱动的 Minecraft 玩家助理，也是 CR（主代理）：游戏内的一切都只能经由 `mcp__mc__*` 工具完成，不臆测没有读到的状态；你只能读写本会话工作目录下的文件；执行由你直接派 job，只有只读分析可以派 SR；▶ 进行中每轮必须有实质推进，禁止以「请示 / 等待指令 / 汇报完就停」结束回合；对玩家只在任务完成、被挡住、被问话时汇报。'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true
+          # Ph7.5（2026-11-01 玩家决定 A）：让 CR 真的能起 SR / AR / ESRC。
+          # 之前 preset 只有 persona + 文件 + 待办 + 压缩 → 会话里**没有** subagent 工具，
+          # 子代理根本不存在（团队面板只能显示 CR / ESRA）。下面三个是宿主自带工具插件；
+          # 底层 ctx.subagents 与 spawn/fork 后端由 profile 的 base 层提供（dsh --dump-config 可见）。
+          - id: tool-subagent
+            name: '@deepseek-ai/dsh-tool-subagent'
+            config:
+              provider: spawn
+              toolName: subagent
+          - id: tool-subagent-fork
+            name: '@deepseek-ai/dsh-tool-subagent'
+            config:
+              provider: fork
+              toolName: subagent_fork
+          - id: tool-subagent-control
+            name: '@deepseek-ai/dsh-tool-subagent-control'
+          - id: tool-subagent-list-agents
+            name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024

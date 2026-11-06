@@ -1,0 +1,53 @@
+{
+  "name": "@local/zff-mc",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ZFF MC —— DSH 插件：让 CR 主代理操控真实 Minecraft 客户端（自动续跑 / 提示词三件套 / 管理员下线 / 启动器）。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "minecraft",
+    "zff",
+    "agent"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/en.json": "./locale/en.json",
+    "./locale/zh.json": "./locale/zh.json",
+    "./presets/*.patch.yml": "./presets/*.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "selfcheck.mjs",
+    "cordis.patch.yml",
+    "presets",
+    "src",
+    "defaults",
+    "locale",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": [
+        "./cordis.patch.yml",
+        "./presets/zff-mc.patch.yml"
+      ]
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "check": "node selfcheck.mjs"
+  }
+}

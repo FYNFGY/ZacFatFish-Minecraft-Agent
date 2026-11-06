@@ -1,0 +1,15 @@
+{
+  "name": "mcp-minecraft-control",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server for the mcpbridge NeoForge client mod",
+  "scripts": {
+    "start": "node src/server.js --stdio",
+    "http": "node src/server.js --http --port 57610"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "zod": "3.25.76"
+  }
+}

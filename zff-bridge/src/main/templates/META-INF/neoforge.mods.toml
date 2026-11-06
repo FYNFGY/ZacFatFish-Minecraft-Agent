@@ -1,0 +1,59 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+issueTrackerURL = "https://example.invalid/mcpbridge"
+showAsResourcePack = false
+
+# Ph5 T1: one mod, both sides. The same jar is installed on the client and on a dedicated server;
+# FML loads the common entry point everywhere and the client-only package only on a client.
+# (NeoForge 21.1 has no `displayTest` key any more - the class is absent from the loader jar - so the
+# channel is registered as optional instead, which is what keeps a server/client version mismatch from
+# rejecting the connection.)
+[[mods]]
+modId = "mcpbridge"
+version = "0.2.0"
+displayName = "ZFF Bridge (client + server)"
+authors = "ZFF bridge"
+# Ph6 M3: the server half is optional. Without this the client is rejected by a server that does not
+# have the mod at all ("Incompatible client! Please use NeoForge ..."), which breaks the whole point of
+# "只装客户端也能跑". IGNORE_ALL_VERSION = "never complain in either direction".
+displayTest = "IGNORE_ALL_VERSION"
+description = '''
+One mod for both sides. On a client: a loopback-only control surface for an MCP agent that runs inside
+the real headed client (all world access happens on the client main thread) plus the job watchdog.
+On a server: the /zff commands, the shared memory/todo SavedData and the mod channel - no extra port.
+Ph6: the server half is optional. The client announces hello + negotiate{modVersion, protocol} and a
+server half answers hello_ack{modVersion, protocol, serverId}; no answer means backend=local, a
+different protocol means backend=local(mismatch), and every server-only feature stays off.
+Standalone-safe: no other mod is required, Baritone and JEI stay optional client-side helpers.
+'''
+
+[[dependencies.mcpbridge]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.228,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.mcpbridge]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.21.2)"
+ordering = "NONE"
+side = "BOTH"
+
+# Baritone is a client-side pathing helper: the server never needs it.
+[[dependencies.mcpbridge]]
+modId = "baritoe"
+type = "optional"
+versionRange = "[1.11.0,)"
+ordering = "NONE"
+side = "CLIENT"
+
+# JEI is only read by the client-side recipe lookup.
+[[dependencies.mcpbridge]]
+modId = "jei"
+type = "optional"
+versionRange = "[19,)"
+ordering = "NONE"
+side = "CLIENT"
